@@ -129,9 +129,12 @@ function sameAuthority(left: ChatGptTurnEnvironment, right: ChatGptTurnEnvironme
     const expected = new Set(b.map(pathIdentity));
     return a.length === expected.size && a.every(path => expected.has(pathIdentity(path)));
   };
+  const rolloutWritableRoots = new Set(right.writableRoots.map(pathIdentity));
   return pathIdentity(left.cwd) === pathIdentity(right.cwd)
     && samePaths(left.roots, right.roots)
-    && samePaths(left.writableRoots, right.writableRoots)
+    // The envelope lists workspace roots, while the rollout may grant additional output roots.
+    // Only the rollout can authorize those extra writes; the envelope must not claim any more.
+    && left.writableRoots.every(path => rolloutWritableRoots.has(pathIdentity(path)))
     && left.sandboxPolicy.type === right.sandboxPolicy.type
     && (left.sandboxPolicy.type === "dangerFullAccess" || (right.sandboxPolicy.type !== "dangerFullAccess"
       && left.sandboxPolicy.networkAccess === right.sandboxPolicy.networkAccess));
